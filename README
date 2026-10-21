@@ -59,8 +59,8 @@ The first version of this project reported strong wins. Re-checking the analysis
 
 ## 📂 Files
 
-- `Portfolio_Project_A_B_Test_Significance_Analysis.ipynb` – Google Colab notebook with the full pipeline (commentary in Ukrainian)
-- `ab_test_significance_results.csv` – all results: totals and segments
+- `Update_Portfolio_Project_A_B_Test_Significance_Analysis.ipynb` – Google Colab notebook with the full pipeline (commentary in Ukrainian)
+- `ab_test_significance_results (fin).csv` – all results: totals and segments
 - `ab_test_summary_by_test.csv` – totals only, one row per test and metric
 
 ## 🛠 Stack
