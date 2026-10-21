@@ -1,49 +1,68 @@
-# A/B Test Significance Analysis
+# 🧪 A/B Test Significance Analysis | BigQuery + Python + Tableau
 
-Python-пайплайн для розрахунку статистичної значущості A/B-тестування
-e-commerce воронки: BigQuery → pandas → z-тест для двох пропорцій → CSV → Tableau.
+**[▶ Open the Tableau dashboard](https://public.tableau.com/views/ABTestStatisticalSignificance_17875767365580/Dashboard1)** · **[Notebook](Portfolio_Project_A_B_Test_Significance_Analysis.ipynb)** · **[Results CSV](ab_test_significance_results.csv)**
 
-Портфоліо-проєкт: автоматизація розрахунку значущості замість онлайн-калькуляторів,
-з підтримкою довільної кількості метрик і розрізів через масиви та цикли.
+## 🔍 Project Overview
 
-## Що всередині
+A Python pipeline that evaluates four A/B tests on an e-commerce checkout funnel: BigQuery → pandas → two-proportion z-test → CSV → Tableau.
 
-- **`AB_Test_Significance_Analysis.ipynb`** — Google Colab ноутбук з повним пайплайном:
-  - підключення до BigQuery та вивантаження даних (той самий SQL-запит, що й у
-    завданні *Create Your A/B Testing Tool*)
-  - z-тест для двох пропорцій (pooled proportion), реалізований вручну
-  - розрахунок значущості для 4 метрик в тоталі по кожному тесту:
-    - `add_payment_info / session`
-    - `add_shipping_info / session`
-    - `begin_checkout / session`
-    - `new_accounts / session`
-  - додатковий розрахунок у розрізах `country`, `device`, `continent`, `channel`
-  - висновки за результатами
-- **`ab_test_significance_results.csv`** — фінальний файл з результатами розрахунків,
-  використаний для побудови дашборду в Tableau
+It replaces online significance calculators with reproducible code. Metrics and segment dimensions are defined as lists, so a new metric or a new cut can be added in one line without changing the logic.
 
-## Метрики та метод
+## 🎯 Business Question
 
-Значущість перевіряється двостороннім z-тестом для двох незалежних пропорцій
-(рівень значущості α = 0.05). Кількість метрик і розрізів у коді не захардкоджена —
-вони задаються масивами (`METRICS`, `CUT_DIMENSIONS`), тому додати нову метрику чи
-новий розріз можна одним рядком, не змінюючи основну логіку.
+Did any of the four tested variants change how many sessions move through the checkout funnel, and is the effect reliable enough to roll out?
 
-## Результати
+## 📏 Metrics
 
-- **Тест 1** — найпомітніший результат: значуще покращення одразу по трьох
-  метриках верхньої частини воронки.
-- **Тест 2** — жодної значущої різниці між групами.
-- **Тест 3 і Тест 4** — часткові результати, переважно навколо `begin_checkout`,
-  яка виявилась найчутливішою метрикою в дослідженні.
+Each metric is the **share of sessions in which an event happened**:
 
-Детальні цифри та повні висновки — у ноутбуці.
+- `add_payment_info / session`
+- `add_shipping_info / session`
+- `begin_checkout / session`
+- `new_accounts / session`
 
-## Посилання
+## ⚙️ Method
 
-- Дашборд у Tableau:
-- CSV з результатами: https://www.google.com/url?q=https%3A%2F%2Fdrive.google.com%2Ffile%2Fd%2F1y9fDjQoTUaI-d7s9iMnFXy1CdJtB_QBr%2Fview%3Fusp%3Dsharing%255D
+1. **Data:** SQL in BigQuery joins A/B group assignment with sessions, events, orders and accounts. Events are counted with `COUNT(DISTINCT session_id)`, so each session is either a "success" or not.
+2. **Sample Ratio Mismatch check:** a χ² test confirms that sessions are split evenly between groups in every test (49.9–50.2%, no SRM).
+3. **Two-proportion z-test** (pooled), implemented manually, plus a **95% confidence interval** for the difference between groups (in percentage points).
+4. **Multiple comparisons:** each test checks 4 metrics, so p-values are adjusted with the **Holm correction** within each test. Final significance is based on the adjusted p-value < 0.05.
+5. **Segments** (country, device, continent, channel) are calculated as **exploratory analysis**, without correction, and are treated as hypotheses rather than conclusions.
+6. **Tableau dashboard** shows conversion rates, the difference with its confidence interval, raw and Holm-adjusted p-values, filtered by test.
 
-## Стек
+## 📈 Results
 
-`Python` · `pandas` · `numpy` · `scipy.stats` · `google-cloud-bigquery` · `Tableau`
+Difference = group 2 minus group 1, in percentage points (pp).
+
+| Test | Metric | Group 1 | Group 2 | Diff, pp (95% CI) | p-value | p-value (Holm) |
+|---|---|---|---|---|---|---|
+| 1 | add_shipping_info | 4.10% | 4.41% | +0.31 (+0.04; +0.57) | 0.022 | 0.088 |
+| 1 | begin_checkout | 4.10% | 4.41% | +0.30 (+0.04; +0.57) | 0.024 | 0.088 |
+| 4 | new_accounts | 8.55% | 8.26% | −0.29 (−0.52; −0.05) | 0.018 | 0.070 |
+| 1–4 | all other metrics | | | CI includes 0 | ≥ 0.12 | ≥ 0.25 |
+
+- **No test shows a statistically reliable effect** on any of the four metrics after correcting for multiple comparisons.
+- **Test 1** shows a weak signal of improvement in checkout steps, and **Test 4** a weak signal of fewer registrations. Neither survives the Holm correction.
+- `add_shipping_info` and `begin_checkout` are almost identical in this dataset: nearly every session that starts checkout also adds shipping info. The two "signals" in Test 1 are effectively one.
+- **Segments:** about 3.5% of ~1,800 segment comparisons are significant without correction, below the ~5% expected by chance alone. No segment-level evidence of an effect either.
+
+**Recommendation:** do not roll out any variant based on this data. If the changes in Tests 1 and 4 matter to the business, re-run them with a larger sample.
+
+## 🔁 What I Changed After Reviewing My First Version
+
+The first version of this project reported strong wins. Re-checking the analysis showed they were artifacts:
+
+- **Events vs. sessions.** The original SQL counted events with `COUNT` instead of `COUNT(DISTINCT session)`. Repeated events in one session were counted several times, inflating conversion roughly 2×. The headline result, Test 1 `add_payment_info` **+12.5% (p = 0.00009)**, disappeared after the fix: +2.4%, p = 0.60. Group 2 sessions were not reaching payment more often; they were triggering the payment event more times per session (2.27 vs. 2.06), which may even indicate friction in the payment step.
+- **Multiple comparisons.** Adding the Holm correction removed the remaining "significant" results in Tests 1 and 4.
+- **Added** the SRM check and confidence intervals, and labelled segments as exploratory.
+- **Dashboard:** colour is now based on adjusted significance, conversion rates are shown as percentages, and the "All tests" filter option was removed because it summed p-values across tests.
+
+## 📂 Files
+
+- `Portfolio_Project_A_B_Test_Significance_Analysis.ipynb` – Google Colab notebook with the full pipeline (commentary in Ukrainian)
+- `ab_test_significance_results.csv` – all results: totals and segments
+- `ab_test_summary_by_test.csv` – totals only, one row per test and metric
+
+## 🛠 Stack
+
+`SQL` · `Google BigQuery` · `Python` · `pandas` · `NumPy` · `SciPy` · `statsmodels` · `Tableau`
