@@ -1,6 +1,6 @@
 # 🧪 A/B Test Significance Analysis | BigQuery + Python + Tableau
 
-**[▶ Open the Tableau dashboard](https://public.tableau.com/views/ABTestStatisticalSignificance_17875767365580/Dashboard1)** · **[Notebook](Update_Portfolio_Project_A_B_Test_Significance_Analysis)** · **[Results CSV](ab_test_significance_results (fin))**
+**[▶ Open the Tableau dashboard](https://public.tableau.com/views/ABTestStatisticalSignificance_17875767365580/Dashboard1)** · **[Notebook](Update_Portfolio_Project_A_B_Test_Significance_Analysis.ipynb)** · **[Results CSV](ab_test_significance_results%20%28fin%29.csv)**
 
 ## 🔍 Project Overview
 
